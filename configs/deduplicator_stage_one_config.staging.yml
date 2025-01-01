@@ -1,0 +1,24 @@
+stage_name: STAGE_ONE
+output_method: queue # valid options are queue, webhook
+log_sources:
+  aws_vpc_logs:
+    unique_string_fields: AccountID,InterfaceID,SourceIP,SourcePort,DestinationPort 
+
+services:
+  incomming_queue:
+    # For host, set <STAGE_NAME>DEDUPLICATOR_INCOMING_QUEUE_HOST environment variable
+    user: rabbit
+    port: 5672
+    queue_name: logs  
+
+  outgoing_queue:
+    # For host, set <STAGE_NAME>DEDUPLICATOR_INCOMING_QUEUE_HOST environment variable
+    user: rabbit
+    port: 5672
+    queue_name: logs
+  
+  redis_cache:
+    # For host, set <STAGE_NAME>DEDUPLICATOR_REDIS_CACHE_HOST environment variable
+    port: 6379
+    db: 0
+    expiry: 60   # 2 minute    
