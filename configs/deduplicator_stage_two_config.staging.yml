@@ -1,5 +1,5 @@
 stage_name: STAGE_TWO
-output_method: opensearch # valid options are queue, opensearch
+output_method: queue # valid options are queue, opensearch
 log_sources:
   aws_vpc_logs:
     unique_string_fields: AccountID,InterfaceID,SourceIP,SourcePort,DestinationPort 

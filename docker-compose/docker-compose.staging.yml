@@ -1,23 +1,32 @@
 services:
   catcher:
     build:
-      context: ./catcher
-      dockerfile: ./catcher/Dockerfile.staging
-  environment:
-    - Test=staging
-  depends_on:
-    catcher-outgoing-queue:
-      condition: service_healthy
-  ports:
-    - "8080:8080"
-  networks:
-    - argus
+      context: ../catcher
+      dockerfile: ../catcher/Dockerfile.staging
+    environment:
+      CATCHER_OUTGOING_QUEUE_PASSWORD: ${CATCHER_OUTGOING_QUEUE_PASSWORD}
+      CATCHER_OUTGOING_QUEUE_HOST: ${CATCHER_OUTGOING_QUEUE_HOST}
+      CATCHER_HTTP_WEBHOOK_TOKEN: ${CATCHER_HTTP_WEBHOOK_TOKEN}
+    depends_on:
+      catcher-outgoing-queue:
+        condition: service_healthy
+    volumes:
+      - type: bind
+        source: ../configs/catcher_config.staging.yml
+        target: /app/config/config.yml
+      - type: bind
+        source: ../logs/catcher
+        target: /app/app_logs
+    ports:
+      - "8080:8080"
+    networks:
+      - argus
   
   catcher-outgoing-queue:
     image: rabbitmq:3
     environment:
       RABBITMQ_DEFAULT_USER: "rabbit"
-      RABBITMQ_DEFAULT_PASS: 
+      RABBITMQ_DEFAULT_PASS: ${CATCHER_OUTGOING_QUEUE_PASSWORD}
     healthcheck:
         test: "rabbitmq-diagnostics -q ping && rabbitmq-diagnostics -q check_running"
         interval: 5s
@@ -28,10 +37,22 @@ services:
 
   deduplicator-stage-one:
     build:
-      context: ./deduplicator
-      dockerfile: ./deduplicator/Dockerfile.staging
+      context: ../deduplicator
+      dockerfile: ../deduplicator/Dockerfile.staging
     environment:
-      - Test=staging
+      STAGE_ONE_DEDUPLICATOR_INCOMING_QUEUE_HOST: ${CATCHER_OUTGOING_QUEUE_HOST}
+      STAGE_ONE_DEDUPLICATOR_INCOMING_QUEUE_PASSWORD: ${CATCHER_OUTGOING_QUEUE_PASSWORD}
+      STAGE_ONE_DEDUPLICATOR_REDIS_CACHE_HOST: ${STAGE_ONE_DEDUPLICATOR_REDIS_CACHE_HOST}
+      STAGE_ONE_DEDUPLICATOR_OUTGOING_QUEUE_HOST: ${STAGE_ONE_DEDUPLICATOR_OUTGOING_QUEUE_HOST}
+      STAGE_ONE_DEDUPLICATOR_OUTGOING_QUEUE_PASSWORD: ${STAGE_ONE_DEDUPLICATOR_OUTGOING_QUEUE_PASSWORD}
+      DEDUPLICATOR_LOG_LEVEL: ${DEDUPLICATOR_LOG_LEVEL}
+    volumes:
+      - type: bind
+        source: ../configs/deduplicator_stage_one_config.staging.yml
+        target: /app/config/config.yml
+      - type: bind
+        source: ../logs/deduplicator_stage_one
+        target: /app/app_logs
     depends_on:
       catcher-outgoing-queue:
         condition: service_healthy
@@ -46,7 +67,7 @@ services:
     image: rabbitmq:3
     environment:
       RABBITMQ_DEFAULT_USER: "rabbit"
-      RABBITMQ_DEFAULT_PASS: 
+      RABBITMQ_DEFAULT_PASS: ${STAGE_ONE_DEDUPLICATOR_OUTGOING_QUEUE_PASSWORD}
     healthcheck:
         test: "rabbitmq-diagnostics -q ping && rabbitmq-diagnostics -q check_running"
         interval: 5s
@@ -68,10 +89,22 @@ services:
 
   deduplicator-stage-two:
     build:
-      context: ./deduplicator
-      dockerfile: ./deduplicator/Dockerfile.staging
+      context: ../deduplicator
+      dockerfile: ../deduplicator/Dockerfile.staging
     environment:
-      - Test=staging
+      STAGE_TWO_DEDUPLICATOR_INCOMING_QUEUE_HOST: ${STAGE_ONE_DEDUPLICATOR_OUTGOING_QUEUE_HOST}
+      STAGE_TWO_DEDUPLICATOR_INCOMING_QUEUE_PASSWORD: ${STAGE_ONE_DEDUPLICATOR_OUTGOING_QUEUE_PASSWORD}
+      STAGE_TWO_DEDUPLICATOR_REDIS_CACHE_HOST: ${STAGE_TWO_DEDUPLICATOR_REDIS_CACHE_HOST}
+      STAGE_TWO_DEDUPLICATOR_OUTGOING_QUEUE_HOST: ${STAGE_TWO_DEDUPLICATOR_OUTGOING_QUEUE_HOST}
+      STAGE_TWO_DEDUPLICATOR_OUTGOING_QUEUE_PASSWORD: ${STAGE_TWO_DEDUPLICATOR_OUTGOING_QUEUE_PASSWORD}
+      DEDUPLICATOR_LOG_LEVEL: ${DEDUPLICATOR_LOG_LEVEL}
+    volumes:
+      - type: bind
+        source: ../configs/deduplicator_stage_two_config.staging.yml
+        target: /app/config/config.yml
+      - type: bind
+        source: ../logs/deduplicator_stage_two
+        target: /app/app_logs
     depends_on:
       deduplicator-stage-one-outgoing-queue:
         condition: service_healthy
@@ -86,7 +119,7 @@ services:
     image: rabbitmq:3
     environment:
       RABBITMQ_DEFAULT_USER: "rabbit"
-      RABBITMQ_DEFAULT_PASS: 
+      RABBITMQ_DEFAULT_PASS: ${STAGE_TWO_DEDUPLICATOR_OUTGOING_QUEUE_PASSWORD}
     healthcheck:
         test: "rabbitmq-diagnostics -q ping && rabbitmq-diagnostics -q check_running"
         interval: 5s
@@ -107,15 +140,28 @@ services:
   
   deduplicator-stage-three:
     build:
-      context: ./deduplicator
-      dockerfile: ./deduplicator/Dockerfile.staging
+      context: ../deduplicator
+      dockerfile: ../deduplicator/Dockerfile.staging
     environment:
-      - Test=staging
+      STAGE_THREE_DEDUPLICATOR_INCOMING_QUEUE_HOST: ${STAGE_TWO_DEDUPLICATOR_OUTGOING_QUEUE_HOST}
+      STAGE_THREE_DEDUPLICATOR_INCOMING_QUEUE_PASSWORD: ${STAGE_TWO_DEDUPLICATOR_OUTGOING_QUEUE_PASSWORD}
+      STAGE_THREE_DEDUPLICATOR_REDIS_CACHE_HOST: ${STAGE_THREE_DEDUPLICATOR_REDIS_CACHE_HOST}
+      STAGE_THREE_DEDUPLICATOR_OPENSEARCH_HOST: ${STAGE_THREE_DEDUPLICATOR_OPENSEARCH_HOST}
+      STAGE_THREE_DEDUPLICATOR_OPENSEARCH_PASSWORD: ${STAGE_THREE_DEDUPLICATOR_OPENSEARCH_PASSWORD}
+      DEDUPLICATOR_LOG_LEVEL: ${DEDUPLICATOR_LOG_LEVEL}
+    volumes:
+      - type: bind
+        source: ../configs/deduplicator_stage_three_config.staging.yml
+        target: /app/config/config.yml
+      - type: bind
+        source: ../logs/deduplicator_stage_three
+        target: /app/app_logs
     depends_on:
       deduplicator-stage-two-outgoing-queue:
         condition: service_healthy
-      #  Opensearch
       deduplicator-stage-three-redis-cache:
+        condition: service_healthy
+      opensearch-node1:
         condition: service_healthy
     networks:
       - argus
@@ -134,14 +180,14 @@ services:
     image: opensearchproject/opensearch:latest
     container_name: opensearch-node1
     environment:
-      - cluster.name=opensearch-cluster
-      - node.name=opensearch-node1
-      - discovery.seed_hosts=opensearch-node1,opensearch-node2
-      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2
-      - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=
-      - plugins.security.ssl.http.enabled=false
+      cluster.name: opensearch-cluster
+      node.name: opensearch-node1
+      discovery.seed_hosts: opensearch-node1,opensearch-node2
+      cluster.initial_cluster_manager_nodes: opensearch-node1,opensearch-node2
+      bootstrap.memory_lock: true
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      plugins.security.ssl.http.enabled: false
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${STAGE_THREE_DEDUPLICATOR_OPENSEARCH_PASSWORD}
     ulimits:
       memlock:
         soft: -1
@@ -154,6 +200,11 @@ services:
     ports:
       - 9200:9200 # REST API
       - 9600:9600 # Performance Analyzer
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -s -o /dev/null -w '%{http_code}' http://localhost:9200 | grep -q '200\\|401'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - argus
 
@@ -161,13 +212,13 @@ services:
     image: opensearchproject/opensearch:latest
     container_name: opensearch-node2
     environment:
-      - cluster.name=opensearch-cluster
-      - node.name=opensearch-node2
-      - discovery.seed_hosts=opensearch-node1,opensearch-node2
-      - cluster.initial_cluster_manager_nodes=opensearch-node1,opensearch-node2
-      - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=Amagi@123
+      cluster.name: opensearch-cluster
+      node.name: opensearch-node2
+      discovery.seed_hosts: opensearch-node1,opensearch-node2
+      cluster.initial_cluster_manager_nodes: opensearch-node1,opensearch-node2
+      bootstrap.memory_lock: true
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${STAGE_THREE_DEDUPLICATOR_OPENSEARCH_PASSWORD}
     ulimits:
       memlock:
         soft: -1
@@ -179,6 +230,7 @@ services:
       - opensearch-data2:/usr/share/opensearch/data
     networks:
       - argus
+
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:latest
     container_name: opensearch-dashboards
@@ -186,5 +238,19 @@ services:
       - 5601:5601 # Dashboards UI
     expose:
       - "5601"
+    depends_on:
+      opensearch-node1:
+        condition: service_healthy
     environment:
       OPENSEARCH_HOSTS: '["https://opensearch-node1:9200","https://opensearch-node2:9200"]'
+    networks:
+      - argus
+
+
+networks:
+  argus:
+    driver: bridge
+
+volumes:
+  opensearch-data1:
+  opensearch-data2:

@@ -1,5 +1,5 @@
 stage_name: STAGE_THREE
-output_method: queue # valid options are queue, webhook
+output_method: opensearch # valid options are queue, opensearch
 log_sources:
   aws_vpc_logs:
     unique_string_fields: AccountID,InterfaceID,SourceIP,SourcePort,DestinationPort 
@@ -21,6 +21,6 @@ services:
     # For host, set <STAGE_NAME>DEDUPLICATOR_OPENSEARCH_HOST environment variable
     port: 9200
     username: admin
-    preferred_patch_size: 1000
+    preferred_batch_size: 1000
     retries: 10         # Number of retries before making batch ingest
-    retry_delay: 5
+    retry_delay: 5000  # Milliseconds to wait before retrying
