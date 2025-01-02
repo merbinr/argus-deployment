@@ -6,7 +6,7 @@ if [ -d "catcher" ]; then
     echo "Catcher directory exists. Ignore cloning..."
 else
     echo "Catcher directory does not exist. Cloning..."
-    git clone git@github.com:merbinr/catcher.git
+    git clone https://github.com/merbinr/catcher.git
     echo "Cloning catcher done."
 fi
 
@@ -15,7 +15,7 @@ if [ -d "deduplicator" ]; then
     echo "Deduplicator directory exists. Ignore cloning..."
 else
     echo "Deduplicator directory does not exist. Cloning..."
-    git clone git@github.com:merbinr/deduplicator.git
+    git clone https://github.com/merbinr/deduplicator.git
     echo "Cloning deduplicator done."
 fi
 
