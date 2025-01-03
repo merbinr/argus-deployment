@@ -1,0 +1,50 @@
+user nginx;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    # Block all HTTPS requests without valid Host headers
+    server {
+        listen [::]:443 ssl default_server;
+        listen 443 ssl default_server;
+        server_name _;
+        ssl_certificate /etc/letsencrypt/live/${ARGUS_CERTBOT_DOMAIN_VALUE}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${ARGUS_CERTBOT_DOMAIN_VALUE}/privkey.pem;
+        return 404;
+    }
+    server {
+        listen 80;
+        server_name _;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name ${ARGUS_CERTBOT_DOMAIN_VALUE};
+
+        ssl_certificate /etc/letsencrypt/live/${ARGUS_CERTBOT_DOMAIN_VALUE}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${ARGUS_CERTBOT_DOMAIN_VALUE}/privkey.pem;
+
+        location / {
+            proxy_pass http://catcher:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /dashboard {
+            proxy_pass http://opensearch-dashboards:5601;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+    }
+}

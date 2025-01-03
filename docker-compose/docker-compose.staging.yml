@@ -17,8 +17,6 @@ services:
       - type: bind
         source: ../logs/catcher
         target: /app/app_logs
-    ports:
-      - "8080:8080"
     networks:
       - argus
   
@@ -234,15 +232,27 @@ services:
   opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:latest
     container_name: opensearch-dashboards
-    ports:
-      - 5601:5601 # Dashboards UI
-    expose:
-      - "5601"
     depends_on:
       opensearch-node1:
         condition: service_healthy
     environment:
       OPENSEARCH_HOSTS: '["https://opensearch-node1:9200","https://opensearch-node2:9200"]'
+    networks:
+      - argus
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - type: bind
+        source: ../configs/nginx.conf
+        target: /etc/nginx/nginx.conf
+      - type: bind
+        source: /etc/letsencrypt
+        target: /etc/letsencrypt
     networks:
       - argus
 
